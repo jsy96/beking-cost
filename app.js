@@ -221,16 +221,21 @@ async function createTable(name, fields) {
     const table = result.data.table;
     const tableId = table.table_id;
 
+    console.log('创建表格成功:', name, 'tableId:', tableId);
+    console.log('准备创建字段:', fields);
+
     // 逐个添加字段
     for (const field of fields) {
         try {
-            await feishuAPI(
+            console.log('创建字段:', field);
+            const fieldResult = await feishuAPI(
                 `https://open.feishu.cn/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/fields`,
                 'POST',
                 field
             );
+            console.log('字段创建成功:', field.field_name);
         } catch (error) {
-            console.warn('创建字段失败:', field.field_name, error.message);
+            console.error('创建字段失败:', field.field_name, error.message);
         }
     }
 
