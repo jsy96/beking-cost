@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成本核算与利润统计系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 配置面板 -->
+        <div id="configPanel" class="panel hidden">
+            <h2>飞书API配置</h2>
+            <div class="form-group">
+                <label>App ID:</label>
+                <input type="text" id="appId" placeholder="cli_xxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label>App Secret:</label>
+                <input type="password" id="appSecret" placeholder="xxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label>多维表格 ID (Sheet Token):</label>
+                <input type="text" id="sheetToken" placeholder="bascnxxxxxxxx">
+            </div>
+            <button onclick="saveConfig()" class="btn btn-primary">保存配置</button>
+            <button onclick="toggleConfig()" class="btn btn-secondary">关闭</button>
+            <div id="configHelp" class="help-text">
+                <h3>如何获取这些信息？</h3>
+                <ol>
+                    <li>打开 <a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a></li>
+                    <li>创建企业自建应用，获取 App ID 和 App Secret</li>
+                    <li>在权限管理中添加以下权限：
+                        <ul>
+                            <li>bitable:app - 查看、评论、编辑和管理多维表格</li>
+                            <li>bitable:app:readonly - 获取多维表格</li>
+                        </ul>
+                    </li>
+                    <li>创建多维表格，从URL中获取 sheet_token (如：feishu.cn/base/bascnxxxxx)</li>
+                    <li>在表格中创建三个数据表：原料采购、产品配方、商品销售</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 顶部导航 -->
+        <header>
+            <h1>成本核算与利润统计系统</h1>
+            <div class="header-actions">
+                <button onclick="toggleConfig()" class="btn btn-secondary">设置</button>
+                <button onclick="refreshData()" class="btn btn-secondary">刷新数据</button>
+            </div>
+        </header>
+
+        <!-- 主导航 -->
+        <nav class="main-nav">
+            <button class="nav-btn active" onclick="showTab('purchase')">原料采购</button>
+            <button class="nav-btn" onclick="showTab('formula')">产品配方</button>
+            <button class="nav-btn" onclick="showTab('sales')">商品销售</button>
+            <button class="nav-btn" onclick="showTab('stats')">利润统计</button>
+        </nav>
+
+        <!-- 原料采购页面 -->
+        <section id="purchaseTab" class="tab-content active">
+            <div class="tab-header">
+                <h2>原料采购管理</h2>
+                <button onclick="showPurchaseForm()" class="btn btn-primary">新增采购</button>
+            </div>
+            <div id="purchaseForm" class="form-panel hidden">
+                <h3>新增/编辑原料采购</h3>
+                <input type="hidden" id="purchaseRecordId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>原料名称 *</label>
+                        <input type="text" id="purchaseName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>规格</label>
+                        <input type="text" id="purchaseSpec" placeholder="如：500g/袋">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>采购数量 *</label>
+                        <input type="number" id="purchaseQuantity" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>单位</label>
+                        <input type="text" id="purchaseUnit" placeholder="如：kg、袋">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>采购总价 (元) *</label>
+                        <input type="number" id="purchaseTotalPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>采购单价 (元)</label>
+                        <input type="text" id="purchaseUnitPrice" readonly class="readonly">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>采购日期 *</label>
+                        <input type="date" id="purchaseDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>供应商</label>
+                        <input type="text" id="purchaseSupplier">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button onclick="savePurchase()" class="btn btn-primary">保存</button>
+                    <button onclick="hidePurchaseForm()" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="purchaseTable">
+                    <thead>
+                        <tr>
+                            <th>原料名称</th>
+                            <th>规格</th>
+                            <th>数量</th>
+                            <th>单位</th>
+                            <th>单价(元)</th>
+                            <th>总价(元)</th>
+                            <th>日期</th>
+                            <th>供应商</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchaseTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 产品配方页面 -->
+        <section id="formulaTab" class="tab-content">
+            <div class="tab-header">
+                <h2>产品配方管理</h2>
+                <button onclick="showFormulaForm()" class="btn btn-primary">新增配方</button>
+            </div>
+            <div id="formulaForm" class="form-panel hidden">
+                <h3>新增/编辑产品配方</h3>
+                <input type="hidden" id="formulaRecordId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>产品名称 *</label>
+                        <input type="text" id="formulaProductName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>制作数量 *</label>
+                        <input type="number" id="formulaQuantity" step="1" required>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h4>原料配比</h4>
+                    <div id="formulaMaterials"></div>
+                    <button onclick="addMaterialRow()" class="btn btn-secondary btn-sm">+ 添加原料</button>
+                </div>
+                <div class="form-section">
+                    <h4>其他成本</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>包装成本 (元)</label>
+                            <input type="number" id="formulaPackageCost" step="0.01" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>水电成本 (元)</label>
+                            <input type="number" id="formulaUtilityCost" step="0.01" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>单位成本 (元)</label>
+                    <input type="text" id="formulaUnitCost" readonly class="readonly">
+                </div>
+                <div class="form-actions">
+                    <button onclick="saveFormula()" class="btn btn-primary">保存</button>
+                    <button onclick="hideFormulaForm()" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="formulaTable">
+                    <thead>
+                        <tr>
+                            <th>产品名称</th>
+                            <th>制作数量</th>
+                            <th>原料组成</th>
+                            <th>包装+水电(元)</th>
+                            <th>单位成本(元)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formulaTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 商品销售页面 -->
+        <section id="salesTab" class="tab-content">
+            <div class="tab-header">
+                <h2>商品销售管理</h2>
+                <button onclick="showSalesForm()" class="btn btn-primary">新增销售</button>
+            </div>
+            <div id="salesForm" class="form-panel hidden">
+                <h3>新增/编辑销售记录</h3>
+                <input type="hidden" id="salesRecordId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>销售日期 *</label>
+                        <input type="date" id="salesDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>产品名称 *</label>
+                        <select id="salesProductName" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>销售数量 *</label>
+                        <input type="number" id="salesQuantity" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>销售总金额 (元) *</label>
+                        <input type="number" id="salesTotalAmount" step="0.01" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>销售单价 (元)</label>
+                        <input type="text" id="salesUnitPrice" readonly class="readonly">
+                    </div>
+                    <div class="form-group">
+                        <label>单位成本 (元)</label>
+                        <input type="text" id="salesUnitCost" readonly class="readonly">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>成本总额 (元)</label>
+                        <input type="text" id="salesTotalCost" readonly class="readonly">
+                    </div>
+                    <div class="form-group">
+                        <label>利润 (元)</label>
+                        <input type="text" id="salesProfit" readonly class="readonly profit">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button onclick="saveSales()" class="btn btn-primary">保存</button>
+                    <button onclick="hideSalesForm()" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>销售日期</th>
+                            <th>产品名称</th>
+                            <th>数量</th>
+                            <th>单价(元)</th>
+                            <th>销售额(元)</th>
+                            <th>成本(元)</th>
+                            <th>利润(元)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 利润统计页面 -->
+        <section id="statsTab" class="tab-content">
+            <div class="tab-header">
+                <h2>利润统计</h2>
+            </div>
+            <div class="stats-filters">
+                <div class="form-group">
+                    <label>统计范围:</label>
+                    <select id="statsRange" onchange="updateStats()">
+                        <option value="today">今天</option>
+                        <option value="week">本周</option>
+                        <option value="month">本月</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div id="customDateRange" class="form-row hidden">
+                    <div class="form-group">
+                        <label>开始日期:</label>
+                        <input type="date" id="statsStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>结束日期:</label>
+                        <input type="date" id="statsEndDate">
+                    </div>
+                </div>
+            </div>
+            <div class="stats-cards">
+                <div class="stats-card">
+                    <h3>销售总额</h3>
+                    <p id="totalSales" class="stats-value">0.00</p>
+                    <span class="stats-unit">元</span>
+                </div>
+                <div class="stats-card">
+                    <h3>总成本</h3>
+                    <p id="totalCost" class="stats-value">0.00</p>
+                    <span class="stats-unit">元</span>
+                </div>
+                <div class="stats-card">
+                    <h3>总利润</h3>
+                    <p id="totalProfit" class="stats-value profit">0.00</p>
+                    <span class="stats-unit">元</span>
+                </div>
+                <div class="stats-card">
+                    <h3>利润率</h3>
+                    <p id="profitRate" class="stats-value">0.00</p>
+                    <span class="stats-unit">%</span>
+                </div>
+            </div>
+            <div class="stats-details">
+                <h3>产品销售明细</h3>
+                <table id="statsTable">
+                    <thead>
+                        <tr>
+                            <th>产品名称</th>
+                            <th>销售数量</th>
+                            <th>销售额(元)</th>
+                            <th>成本(元)</th>
+                            <th>利润(元)</th>
+                            <th>利润率(%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 加载提示 -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>加载中...</p>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
