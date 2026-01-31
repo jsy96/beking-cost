@@ -24,7 +24,22 @@ export default async function handler(req, res) {
         if (req.method !== 'GET' && req.body) options.body = JSON.stringify(req.body);
 
         const response = await fetch(targetUrl, options);
-        const data = await response.json();
+
+        // 获取响应文本
+        const text = await response.text();
+        let data;
+
+        // 尝试解析JSON，如果失败则返回原始错误
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('JSON解析失败:', text.substring(0, 200));
+            return res.status(500).json({
+                code: -1,
+                msg: '飞书API返回非JSON响应',
+                error: text.substring(0, 200)
+            });
+        }
 
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
