@@ -403,7 +403,7 @@ function showPurchaseForm(record = null) {
         document.getElementById('purchaseUnit').value = record.fields['单位'] || '';
         document.getElementById('purchaseTotalPrice').value = record.fields['采购总价'] || '';
         document.getElementById('purchaseUnitPrice').value = record.fields['采购单价'] || '';
-        document.getElementById('purchaseDate').value = record.fields['采购日期'] || '';
+        document.getElementById('purchaseDate').value = timestampToDateString(record.fields['采购日期']);
         document.getElementById('purchaseSupplier').value = record.fields['供应商'] || '';
     } else {
         // 新增模式
@@ -452,6 +452,9 @@ async function savePurchase() {
 
     const unitPrice = (totalPrice / quantity).toFixed(2);
 
+    // 将日期字符串转换为毫秒时间戳
+    const dateTimestamp = date ? new Date(date).getTime() : 0;
+
     const fields = {
         '原料名称': name,
         '规格': document.getElementById('purchaseSpec').value.trim(),
@@ -459,7 +462,7 @@ async function savePurchase() {
         '单位': document.getElementById('purchaseUnit').value.trim(),
         '采购总价': totalPrice,
         '采购单价': parseFloat(unitPrice),
-        '采购日期': date,
+        '采购日期': dateTimestamp,
         '供应商': document.getElementById('purchaseSupplier').value.trim()
     };
 
@@ -508,7 +511,7 @@ function renderPurchaseTable() {
             <td>${record.fields['单位'] || '-'}</td>
             <td>${(record.fields['采购单价'] || 0).toFixed(2)}</td>
             <td>${(record.fields['采购总价'] || 0).toFixed(2)}</td>
-            <td>${record.fields['采购日期'] || '-'}</td>
+            <td>${timestampToDateString(record.fields['采购日期']) || '-'}</td>
             <td>${record.fields['供应商'] || '-'}</td>
             <td>
                 <button class="btn btn-sm btn-secondary" onclick='showPurchaseForm(${JSON.stringify(record).replace(/'/g, "&#39;")})'>编辑</button>
@@ -783,7 +786,7 @@ function showSalesForm(record = null) {
 
     if (record) {
         document.getElementById('salesRecordId').value = record.id;
-        document.getElementById('salesDate').value = record.fields['销售日期'] || '';
+        document.getElementById('salesDate').value = timestampToDateString(record.fields['销售日期']);
         document.getElementById('salesProductName').value = record.fields['产品名称'] || '';
         document.getElementById('salesQuantity').value = record.fields['销售数量'] || '';
         document.getElementById('salesTotalAmount').value = record.fields['销售总金额'] || '';
@@ -872,8 +875,11 @@ async function saveSales() {
     const totalCost = parseFloat(document.getElementById('salesTotalCost').value) || 0;
     const profit = parseFloat(document.getElementById('salesProfit').value) || 0;
 
+    // 将日期字符串转换为毫秒时间戳
+    const dateTimestamp = date ? new Date(date).getTime() : 0;
+
     const fields = {
-        '销售日期': date,
+        '销售日期': dateTimestamp,
         '产品名称': productName,
         '销售数量': quantity,
         '销售总金额': totalAmount,
@@ -922,9 +928,9 @@ function renderSalesTable() {
     const tbody = document.getElementById('salesTableBody');
     // 按日期降序排序
     const sortedSales = [...salesData].sort((a, b) => {
-        const dateA = a.fields['销售日期'] || '';
-        const dateB = b.fields['销售日期'] || '';
-        return dateB.localeCompare(dateA);
+        const dateA = a.fields['销售日期'] || 0;
+        const dateB = b.fields['销售日期'] || 0;
+        return dateB - dateA;
     });
 
     tbody.innerHTML = sortedSales.map(record => {
@@ -933,7 +939,7 @@ function renderSalesTable() {
 
         return `
             <tr>
-                <td>${record.fields['销售日期'] || '-'}</td>
+                <td>${timestampToDateString(record.fields['销售日期']) || '-'}</td>
                 <td>${record.fields['产品名称'] || ''}</td>
                 <td>${record.fields['销售数量'] || 0}</td>
                 <td>${(record.fields['销售单价'] || 0).toFixed(2)}</td>
@@ -1052,6 +1058,13 @@ document.getElementById('statsStartDate').addEventListener('change', updateStats
 document.getElementById('statsEndDate').addEventListener('change', updateStats);
 
 // ==================== UI辅助函数 ====================
+// 将时间戳转换为 YYYY-MM-DD 格式
+function timestampToDateString(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toISOString().split('T')[0];
+}
+
 function showTab(tabName) {
     // 隐藏所有标签页
     document.querySelectorAll('.tab-content').forEach(tab => {
