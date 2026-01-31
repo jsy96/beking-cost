@@ -3,350 +3,805 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>成本核算与利润统计系统</title>
-    <link rel="stylesheet" href="style.css">
+    <title>成本核算系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 20px; color: #333; }
+
+        /* 顶部栏 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1890ff; color: white; }
+        .btn-success { background: #52c41a; color: white; }
+        .btn-danger { background: #ff4d4f; color: white; }
+        .btn:hover { opacity: 0.9; }
+
+        /* 标签页 */
+        .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 15px; }
+        .tab-btn.active { border-bottom-color: #1890ff; color: #1890ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 表格 */
+        .table-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #fafafa; font-weight: 600; }
+        .profit { color: #52c41a; }
+        .profit-negative { color: #ff4d4f; }
+
+        /* 配置面板 */
+        .config-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100%; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); padding: 20px; transition: right 0.3s; z-index: 1000; overflow-y: auto; }
+        .config-panel.show { right: 0; }
+        .config-panel h2 { margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .form-actions button { flex: 1; }
+
+        /* 弹窗 */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { margin: 0; }
+        .close { font-size: 24px; cursor: pointer; }
+
+        /* 统计卡片 */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-card h3 { font-size: 14px; opacity: 0.9; margin-bottom: 10px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; }
+
+        /* 提示 */
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 4px; color: white; display: none; z-index: 2000; }
+        .toast.show { display: block; }
+        .toast.success { background: #52c41a; }
+        .toast.error { background: #ff4d4f; }
+
+        /* 加载中 */
+        .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 2000; }
+        .loading.show { display: block; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 原料选择 */
+        .material-list { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; }
+        .material-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
+        .material-item input { flex: 1; }
+        .material-item input[type="number"] { width: 80px; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- 配置面板 -->
-        <div id="configPanel" class="panel hidden">
-            <h2>飞书API配置</h2>
-            <div class="form-group">
-                <label>App ID:</label>
-                <input type="text" id="appId" placeholder="cli_xxxxxxxxx">
-            </div>
-            <div class="form-group">
-                <label>App Secret:</label>
-                <input type="password" id="appSecret" placeholder="xxxxxxxxx">
-            </div>
-            <div class="form-group">
-                <label>多维表格 ID (Sheet Token):</label>
-                <input type="text" id="sheetToken" placeholder="bascnxxxxxxxx">
-            </div>
-            <button onclick="saveConfig()" class="btn btn-primary">保存配置</button>
-            <button onclick="toggleConfig()" class="btn btn-secondary">关闭</button>
-            <div id="configHelp" class="help-text">
-                <h3>如何获取这些信息？</h3>
-                <ol>
-                    <li>打开 <a href="https://open.feishu.cn/app" target="_blank">飞书开放平台</a></li>
-                    <li>创建企业自建应用，获取 App ID 和 App Secret</li>
-                    <li>在权限管理中添加以下权限：
-                        <ul>
-                            <li>bitable:app - 查看、评论、编辑和管理多维表格</li>
-                            <li>bitable:app:readonly - 获取多维表格</li>
-                        </ul>
-                    </li>
-                    <li>创建多维表格，从URL中获取 sheet_token (如：feishu.cn/base/bascnxxxxx)</li>
-                    <li>在表格中创建三个数据表：原料采购、产品配方、商品销售</li>
-                </ol>
-            </div>
+        <h1>成本核算系统</h1>
+
+        <!-- 顶部栏 -->
+        <div class="header">
+            <span id="status">未配置</span>
+            <button class="btn btn-primary" onclick="toggleConfig()">配置</button>
         </div>
 
-        <!-- 顶部导航 -->
-        <header>
-            <h1>成本核算与利润统计系统</h1>
-            <div class="header-actions">
-                <button onclick="toggleConfig()" class="btn btn-secondary">设置</button>
-                <button onclick="refreshData()" class="btn btn-secondary">刷新数据</button>
-            </div>
-        </header>
+        <!-- 标签页 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('purchase')">原料采购</button>
+            <button class="tab-btn" onclick="showTab('formula')">产品配方</button>
+            <button class="tab-btn" onclick="showTab('sales')">商品销售</button>
+            <button class="tab-btn" onclick="showTab('stats')">利润统计</button>
+        </div>
 
-        <!-- 主导航 -->
-        <nav class="main-nav">
-            <button class="nav-btn active" onclick="showTab('purchase')">原料采购</button>
-            <button class="nav-btn" onclick="showTab('formula')">产品配方</button>
-            <button class="nav-btn" onclick="showTab('sales')">商品销售</button>
-            <button class="nav-btn" onclick="showTab('stats')">利润统计</button>
-        </nav>
-
-        <!-- 原料采购页面 -->
-        <section id="purchaseTab" class="tab-content active">
-            <div class="tab-header">
-                <h2>原料采购管理</h2>
-                <button onclick="showPurchaseForm()" class="btn btn-primary">新增采购</button>
-            </div>
-            <div id="purchaseForm" class="form-panel hidden">
-                <h3>新增/编辑原料采购</h3>
-                <input type="hidden" id="purchaseRecordId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>原料名称 *</label>
-                        <input type="text" id="purchaseName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>规格</label>
-                        <input type="text" id="purchaseSpec" placeholder="如：500g/袋">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>采购数量 *</label>
-                        <input type="number" id="purchaseQuantity" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>单位</label>
-                        <input type="text" id="purchaseUnit" placeholder="如：kg、袋">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>采购总价 (元) *</label>
-                        <input type="number" id="purchaseTotalPrice" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>采购单价 (元)</label>
-                        <input type="text" id="purchaseUnitPrice" readonly class="readonly">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>采购日期 *</label>
-                        <input type="date" id="purchaseDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>供应商</label>
-                        <input type="text" id="purchaseSupplier">
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button onclick="savePurchase()" class="btn btn-primary">保存</button>
-                    <button onclick="hidePurchaseForm()" class="btn btn-secondary">取消</button>
-                </div>
-            </div>
+        <!-- 原料采购 -->
+        <div id="purchaseTab" class="tab-content active">
             <div class="table-container">
-                <table id="purchaseTable">
+                <div class="table-header">
+                    <h2>原料采购记录</h2>
+                    <button class="btn btn-success" onclick="showPurchaseModal()">+ 新增</button>
+                </div>
+                <table>
                     <thead>
                         <tr>
                             <th>原料名称</th>
-                            <th>规格</th>
-                            <th>数量</th>
-                            <th>单位</th>
-                            <th>单价(元)</th>
-                            <th>总价(元)</th>
-                            <th>日期</th>
-                            <th>供应商</th>
+                            <th>采购数量</th>
+                            <th>采购单价</th>
+                            <th>采购总价</th>
+                            <th>采购日期</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="purchaseTableBody"></tbody>
                 </table>
             </div>
-        </section>
+        </div>
 
-        <!-- 产品配方页面 -->
-        <section id="formulaTab" class="tab-content">
-            <div class="tab-header">
-                <h2>产品配方管理</h2>
-                <button onclick="showFormulaForm()" class="btn btn-primary">新增配方</button>
-            </div>
-            <div id="formulaForm" class="form-panel hidden">
-                <h3>新增/编辑产品配方</h3>
-                <input type="hidden" id="formulaRecordId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>产品名称 *</label>
-                        <input type="text" id="formulaProductName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>制作数量 *</label>
-                        <input type="number" id="formulaQuantity" step="1" required>
-                    </div>
-                </div>
-                <div class="form-section">
-                    <h4>原料配比</h4>
-                    <div id="formulaMaterials"></div>
-                    <button onclick="addMaterialRow()" class="btn btn-secondary btn-sm">+ 添加原料</button>
-                </div>
-                <div class="form-section">
-                    <h4>其他成本</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>包装成本 (元)</label>
-                            <input type="number" id="formulaPackageCost" step="0.01" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>水电成本 (元)</label>
-                            <input type="number" id="formulaUtilityCost" step="0.01" value="0">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>单位成本 (元)</label>
-                    <input type="text" id="formulaUnitCost" readonly class="readonly">
-                </div>
-                <div class="form-actions">
-                    <button onclick="saveFormula()" class="btn btn-primary">保存</button>
-                    <button onclick="hideFormulaForm()" class="btn btn-secondary">取消</button>
-                </div>
-            </div>
+        <!-- 产品配方 -->
+        <div id="formulaTab" class="tab-content">
             <div class="table-container">
-                <table id="formulaTable">
+                <div class="table-header">
+                    <h2>产品配方管理</h2>
+                    <button class="btn btn-success" onclick="showFormulaModal()">+ 新增</button>
+                </div>
+                <table>
                     <thead>
                         <tr>
                             <th>产品名称</th>
                             <th>制作数量</th>
                             <th>原料组成</th>
-                            <th>包装+水电(元)</th>
-                            <th>单位成本(元)</th>
+                            <th>单位成本</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="formulaTableBody"></tbody>
                 </table>
             </div>
-        </section>
+        </div>
 
-        <!-- 商品销售页面 -->
-        <section id="salesTab" class="tab-content">
-            <div class="tab-header">
-                <h2>商品销售管理</h2>
-                <button onclick="showSalesForm()" class="btn btn-primary">新增销售</button>
-            </div>
-            <div id="salesForm" class="form-panel hidden">
-                <h3>新增/编辑销售记录</h3>
-                <input type="hidden" id="salesRecordId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>销售日期 *</label>
-                        <input type="date" id="salesDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>产品名称 *</label>
-                        <select id="salesProductName" required>
-                            <option value="">请选择</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>销售数量 *</label>
-                        <input type="number" id="salesQuantity" step="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label>销售总金额 (元) *</label>
-                        <input type="number" id="salesTotalAmount" step="0.01" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>销售单价 (元)</label>
-                        <input type="text" id="salesUnitPrice" readonly class="readonly">
-                    </div>
-                    <div class="form-group">
-                        <label>单位成本 (元)</label>
-                        <input type="text" id="salesUnitCost" readonly class="readonly">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>成本总额 (元)</label>
-                        <input type="text" id="salesTotalCost" readonly class="readonly">
-                    </div>
-                    <div class="form-group">
-                        <label>利润 (元)</label>
-                        <input type="text" id="salesProfit" readonly class="readonly profit">
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button onclick="saveSales()" class="btn btn-primary">保存</button>
-                    <button onclick="hideSalesForm()" class="btn btn-secondary">取消</button>
-                </div>
-            </div>
+        <!-- 商品销售 -->
+        <div id="salesTab" class="tab-content">
             <div class="table-container">
-                <table id="salesTable">
+                <div class="table-header">
+                    <h2>商品销售记录</h2>
+                    <button class="btn btn-success" onclick="showSalesModal()">+ 新增</button>
+                </div>
+                <table>
                     <thead>
                         <tr>
                             <th>销售日期</th>
                             <th>产品名称</th>
-                            <th>数量</th>
-                            <th>单价(元)</th>
-                            <th>销售额(元)</th>
-                            <th>成本(元)</th>
-                            <th>利润(元)</th>
+                            <th>销售数量</th>
+                            <th>销售总额</th>
+                            <th>成本</th>
+                            <th>利润</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="salesTableBody"></tbody>
                 </table>
             </div>
-        </section>
-
-        <!-- 利润统计页面 -->
-        <section id="statsTab" class="tab-content">
-            <div class="tab-header">
-                <h2>利润统计</h2>
-            </div>
-            <div class="stats-filters">
-                <div class="form-group">
-                    <label>统计范围:</label>
-                    <select id="statsRange" onchange="updateStats()">
-                        <option value="today">今天</option>
-                        <option value="week">本周</option>
-                        <option value="month">本月</option>
-                        <option value="custom">自定义</option>
-                    </select>
-                </div>
-                <div id="customDateRange" class="form-row hidden">
-                    <div class="form-group">
-                        <label>开始日期:</label>
-                        <input type="date" id="statsStartDate">
-                    </div>
-                    <div class="form-group">
-                        <label>结束日期:</label>
-                        <input type="date" id="statsEndDate">
-                    </div>
-                </div>
-            </div>
-            <div class="stats-cards">
-                <div class="stats-card">
-                    <h3>销售总额</h3>
-                    <p id="totalSales" class="stats-value">0.00</p>
-                    <span class="stats-unit">元</span>
-                </div>
-                <div class="stats-card">
-                    <h3>总成本</h3>
-                    <p id="totalCost" class="stats-value">0.00</p>
-                    <span class="stats-unit">元</span>
-                </div>
-                <div class="stats-card">
-                    <h3>总利润</h3>
-                    <p id="totalProfit" class="stats-value profit">0.00</p>
-                    <span class="stats-unit">元</span>
-                </div>
-                <div class="stats-card">
-                    <h3>利润率</h3>
-                    <p id="profitRate" class="stats-value">0.00</p>
-                    <span class="stats-unit">%</span>
-                </div>
-            </div>
-            <div class="stats-details">
-                <h3>产品销售明细</h3>
-                <table id="statsTable">
-                    <thead>
-                        <tr>
-                            <th>产品名称</th>
-                            <th>销售数量</th>
-                            <th>销售额(元)</th>
-                            <th>成本(元)</th>
-                            <th>利润(元)</th>
-                            <th>利润率(%)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="statsTableBody"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- 加载提示 -->
-        <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <p>加载中...</p>
         </div>
 
-        <!-- 消息提示 -->
-        <div id="toast" class="toast hidden"></div>
+        <!-- 利润统计 -->
+        <div id="statsTab" class="tab-content">
+            <div class="table-container">
+                <h2>利润统计</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>总销售额</h3>
+                        <div class="value" id="totalSales">¥0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>总成本</h3>
+                        <div class="value" id="totalCost">¥0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>总利润</h3>
+                        <div class="value" id="totalProfit">¥0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>利润率</h3>
+                        <div class="value" id="profitRate">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- 配置面板 -->
+    <div id="configPanel" class="config-panel">
+        <h2>飞书配置</h2>
+        <div class="form-group">
+            <label>App ID</label>
+            <input type="text" id="appId" placeholder="cli_xxxxxxxxxxxxx">
+        </div>
+        <div class="form-group">
+            <label>App Secret</label>
+            <input type="password" id="appSecret" placeholder="xxxxxxxxxxxxxxxx">
+        </div>
+        <div class="form-group">
+            <label>Sheet Token (多维表格)</label>
+            <input type="text" id="sheetToken" placeholder="app_xxxxxxxxxxxxx">
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-success" onclick="saveConfig()">保存配置</button>
+            <button class="btn" onclick="toggleConfig()">取消</button>
+        </div>
+        <p style="margin-top: 20px; color: #666; font-size: 12px;">
+            配置后系统将自动创建3个数据表。<br>
+            请确保飞书应用已开启 bitable:app 权限。
+        </p>
+    </div>
+
+    <!-- 原料采购弹窗 -->
+    <div id="purchaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>原料采购</h3>
+                <span class="close" onclick="closeModal('purchaseModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>原料名称 *</label>
+                <input type="text" id="purchaseName">
+            </div>
+            <div class="form-group">
+                <label>采购数量 *</label>
+                <input type="number" id="purchaseQuantity" step="0.01" oninput="calcPurchasePrice()">
+            </div>
+            <div class="form-group">
+                <label>采购单价 *</label>
+                <input type="number" id="purchasePrice" step="0.01" oninput="calcPurchasePrice()">
+            </div>
+            <div class="form-group">
+                <label>采购总价</label>
+                <input type="number" id="purchaseTotal" step="0.01" readonly>
+            </div>
+            <div class="form-group">
+                <label>采购日期 *</label>
+                <input type="date" id="purchaseDate">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-success" onclick="savePurchase()">保存</button>
+                <button class="btn" onclick="closeModal('purchaseModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 产品配方弹窗 -->
+    <div id="formulaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>产品配方</h3>
+                <span class="close" onclick="closeModal('formulaModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>产品名称 *</label>
+                <input type="text" id="formulaName">
+            </div>
+            <div class="form-group">
+                <label>制作数量 *</label>
+                <input type="number" id="formulaQuantity" value="1" min="1" oninput="calcFormulaCost()">
+            </div>
+            <div class="form-group">
+                <label>原料组成</label>
+                <div id="materialList" class="material-list"></div>
+                <button class="btn btn-primary" style="margin-top: 10px; width: 100%;" onclick="addMaterialRow()">+ 添加原料</button>
+            </div>
+            <div class="form-group">
+                <label>单位成本</label>
+                <input type="number" id="formulaUnitCost" step="0.01" readonly>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-success" onclick="saveFormula()">保存</button>
+                <button class="btn" onclick="closeModal('formulaModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品销售弹窗 -->
+    <div id="salesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>商品销售</h3>
+                <span class="close" onclick="closeModal('salesModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>销售日期 *</label>
+                <input type="date" id="salesDate">
+            </div>
+            <div class="form-group">
+                <label>产品 *</label>
+                <select id="salesProduct" onchange="updateSalesCost()">
+                    <option value="">请选择</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>销售数量 *</label>
+                <input type="number" id="salesQuantity" min="1" value="1" oninput="calcSalesProfit()">
+            </div>
+            <div class="form-group">
+                <label>销售总额 *</label>
+                <input type="number" id="salesAmount" step="0.01" oninput="calcSalesProfit()">
+            </div>
+            <div class="form-group">
+                <label>单位成本</label>
+                <input type="number" id="salesUnitCost" step="0.01" readonly>
+            </div>
+            <div class="form-group">
+                <label>利润</label>
+                <input type="number" id="salesProfit" step="0.01" readonly>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-success" onclick="saveSales()">保存</button>
+                <button class="btn" onclick="closeModal('salesModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 加载中 -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const API_BASE = window.location.origin + '/api/feishu';
+        let config = { appId: '', appSecret: '', sheetToken: '', purchaseTableId: '', formulaTableId: '', salesTableId: '' };
+        let accessToken = '';
+        let purchaseData = [], formulaData = [], salesData = [], materialPrices = {};
+        let editingId = null, editingType = '';
+
+        // ==================== 初始化 ====================
+        function init() {
+            loadConfig();
+            if (config.appId && config.appSecret && config.sheetToken) {
+                initTables();
+            } else {
+                toggleConfig();
+            }
+        }
+
+        function loadConfig() {
+            const saved = localStorage.getItem('costConfig');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
+                document.getElementById('appId').value = config.appId || '';
+                document.getElementById('appSecret').value = config.appSecret || '';
+                document.getElementById('sheetToken').value = config.sheetToken || '';
+                updateStatus();
+            }
+        }
+
+        function saveConfig() {
+            config.appId = document.getElementById('appId').value.trim();
+            config.appSecret = document.getElementById('appSecret').value.trim();
+            config.sheetToken = document.getElementById('sheetToken').value.trim();
+            if (!config.appId || !config.appSecret || !config.sheetToken) {
+                showToast('请填写完整配置', 'error');
+                return;
+            }
+            localStorage.setItem('costConfig', JSON.stringify(config));
+            toggleConfig();
+            initTables();
+        }
+
+        function updateStatus() {
+            document.getElementById('status').textContent = config.appId ? '已配置' : '未配置';
+        }
+
+        // ==================== 飞书API ====================
+        async function getAccessToken() {
+            if (accessToken) return accessToken;
+            const res = await fetch(API_BASE + '/open-apis/auth/v3/tenant_access_token/internal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ app_id: config.appId, app_secret: config.appSecret })
+            });
+            const data = await res.json();
+            if (data.code === 0) {
+                accessToken = data.tenant_access_token;
+                return accessToken;
+            }
+            throw new Error(data.msg || '获取token失败');
+        }
+
+        async function feishuAPI(url, method = 'GET', body = null) {
+            const token = await getAccessToken();
+            const opts = { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(API_BASE + url.replace('https://open.feishu.cn', ''), opts);
+            const data = await res.json();
+            if (data.code !== 0) throw new Error(data.msg || 'API错误');
+            return data;
+        }
+
+        // ==================== 初始化表格 ====================
+        async function initTables() {
+            try {
+                showLoading(true);
+                await getAccessToken();
+
+                // 获取现有表格
+                const tables = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`);
+                const existing = tables.data.items;
+
+                // 查找或创建表格
+                let purchaseTbl = existing.find(t => t.name === '原料采购');
+                let formulaTbl = existing.find(t => t.name === '产品配方');
+                let salesTbl = existing.find(t => t.name === '商品销售');
+
+                if (!purchaseTbl) purchaseTbl = await createTable('原料采购');
+                if (!formulaTbl) formulaTbl = await createTable('产品配方');
+                if (!salesTbl) salesTbl = await createTable('商品销售');
+
+                config.purchaseTableId = purchaseTbl.table_id;
+                config.formulaTableId = formulaTbl.table_id;
+                config.salesTableId = salesTbl.table_id;
+                localStorage.setItem('costConfig', JSON.stringify(config));
+
+                await loadData();
+                updateStatus();
+                showToast('初始化成功', 'success');
+            } catch (err) {
+                showToast('初始化失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function createTable(name) {
+            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`, 'POST', {
+                table: { name, default_view_name: '表格视图' }
+            });
+            return res.data.table;
+        }
+
+        async function loadData() {
+            try {
+                showLoading(true);
+                const [purchase, formula, sales] = await Promise.all([
+                    getRecords(config.purchaseTableId),
+                    getRecords(config.formulaTableId),
+                    getRecords(config.salesTableId)
+                ]);
+                purchaseData = purchase;
+                formulaData = formula;
+                salesData = sales;
+                updateMaterialPrices();
+                renderAll();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function getRecords(tableId) {
+            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records`);
+            return (res.data.items || []).map(r => ({ id: r.record_id, fields: r.fields }));
+        }
+
+        // ==================== 原料采购 ====================
+        function showPurchaseModal() {
+            editingId = null;
+            editingType = 'purchase';
+            document.getElementById('purchaseName').value = '';
+            document.getElementById('purchaseQuantity').value = '';
+            document.getElementById('purchasePrice').value = '';
+            document.getElementById('purchaseTotal').value = '';
+            document.getElementById('purchaseDate').value = new Date().toISOString().split('T')[0];
+            showModal('purchaseModal');
+        }
+
+        function calcPurchasePrice() {
+            const qty = parseFloat(document.getElementById('purchaseQuantity').value) || 0;
+            const price = parseFloat(document.getElementById('purchasePrice').value) || 0;
+            document.getElementById('purchaseTotal').value = (qty * price).toFixed(2);
+        }
+
+        async function savePurchase() {
+            const name = document.getElementById('purchaseName').value.trim();
+            const quantity = parseFloat(document.getElementById('purchaseQuantity').value);
+            const price = parseFloat(document.getElementById('purchasePrice').value);
+            const date = document.getElementById('purchaseDate').value;
+            if (!name || !quantity || !price || !date) {
+                showToast('请填写必填项', 'error');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                const fields = {
+                    '原料名称': name, '采购数量': quantity, '采购单价': price,
+                    '采购总价': quantity * price, '采购日期': new Date(date).getTime()
+                };
+                if (editingId) {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.purchaseTableId}/records/${editingId}`, 'PUT', { fields });
+                } else {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.purchaseTableId}/records`, 'POST', { fields });
+                }
+                closeModal('purchaseModal');
+                await loadData();
+                showToast('保存成功', 'success');
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ==================== 产品配方 ====================
+        let materialRows = [];
+
+        function showFormulaModal() {
+            editingId = null;
+            editingType = 'formula';
+            document.getElementById('formulaName').value = '';
+            document.getElementById('formulaQuantity').value = '1';
+            document.getElementById('formulaUnitCost').value = '';
+            materialRows = [];
+            renderMaterialRows();
+            addMaterialRow();
+            showModal('formulaModal');
+        }
+
+        function addMaterialRow() {
+            const options = Object.keys(materialPrices).map(n => `<option value="${n}">${n}</option>`).join('');
+            materialRows.push({ name: '', amount: '' });
+            renderMaterialRows();
+        }
+
+        function renderMaterialRows() {
+            const container = document.getElementById('materialList');
+            container.innerHTML = materialRows.map((m, i) => `
+                <div class="material-item">
+                    <select onchange="updateMaterial(${i}, this.value)">
+                        <option value="">选择原料</option>
+                        ${Object.keys(materialPrices).map(n => `<option value="${n}" ${m.name === n ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                    <input type="number" placeholder="数量" value="${m.amount}" onchange="updateMaterialAmount(${i}, this.value)">
+                    <button class="btn btn-danger" onclick="removeMaterialRow(${i})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function updateMaterial(idx, name) {
+            materialRows[idx].name = name;
+            materialRows[idx].price = materialPrices[name]?.price || 0;
+            calcFormulaCost();
+        }
+
+        function updateMaterialAmount(idx, amount) {
+            materialRows[idx].amount = parseFloat(amount) || 0;
+            calcFormulaCost();
+        }
+
+        function removeMaterialRow(idx) {
+            materialRows.splice(idx, 1);
+            renderMaterialRows();
+            calcFormulaCost();
+        }
+
+        function calcFormulaCost() {
+            const quantity = parseFloat(document.getElementById('formulaQuantity').value) || 1;
+            let materialCost = 0;
+            materialRows.forEach(m => {
+                if (m.name && materialPrices[m.name]) {
+                    materialCost += (parseFloat(m.amount) || 0) * materialPrices[m.name].price;
+                }
+            });
+            const unitCost = materialCost / quantity;
+            document.getElementById('formulaUnitCost').value = unitCost.toFixed(2);
+            return unitCost;
+        }
+
+        async function saveFormula() {
+            const name = document.getElementById('formulaName').value.trim();
+            const quantity = parseFloat(document.getElementById('formulaQuantity').value);
+            if (!name || !quantity) {
+                showToast('请填写必填项', 'error');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                const materials = materialRows.filter(m => m.name && m.amount).map(m => ({
+                    name: m.name,
+                    amount: parseFloat(m.amount),
+                    price: materialPrices[m.name].price
+                }));
+                const unitCost = calcFormulaCost();
+                const fields = {
+                    '产品名称': name, '制作数量': quantity,
+                    '原料组成': JSON.stringify(materials), '单位成本': unitCost
+                };
+                if (editingId) {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.formulaTableId}/records/${editingId}`, 'PUT', { fields });
+                } else {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.formulaTableId}/records`, 'POST', { fields });
+                }
+                closeModal('formulaModal');
+                await loadData();
+                showToast('保存成功', 'success');
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ==================== 商品销售 ====================
+        function showSalesModal() {
+            editingId = null;
+            editingType = 'sales';
+            document.getElementById('salesDate').value = new Date().toISOString().split('T')[0];
+            updateProductSelect();
+            document.getElementById('salesQuantity').value = '1';
+            document.getElementById('salesAmount').value = '';
+            document.getElementById('salesUnitCost').value = '';
+            document.getElementById('salesProfit').value = '';
+            showModal('salesModal');
+        }
+
+        function updateProductSelect() {
+            const products = [...new Set(formulaData.map(f => f.fields['产品名称']))];
+            document.getElementById('salesProduct').innerHTML = '<option value="">请选择</option>' +
+                products.map(p => `<option value="${p}">${p}</option>`).join('');
+        }
+
+        function updateSalesCost() {
+            const productName = document.getElementById('salesProduct').value;
+            const formula = formulaData.find(f => f.fields['产品名称'] === productName);
+            document.getElementById('salesUnitCost').value = formula ? formula.fields['单位成本'].toFixed(2) : '';
+            calcSalesProfit();
+        }
+
+        function calcSalesProfit() {
+            const quantity = parseFloat(document.getElementById('salesQuantity').value) || 0;
+            const amount = parseFloat(document.getElementById('salesAmount').value) || 0;
+            const unitCost = parseFloat(document.getElementById('salesUnitCost').value) || 0;
+            const profit = amount - (unitCost * quantity);
+            document.getElementById('salesProfit').value = profit.toFixed(2);
+        }
+
+        async function saveSales() {
+            const date = document.getElementById('salesDate').value;
+            const productName = document.getElementById('salesProduct').value;
+            const quantity = parseFloat(document.getElementById('salesQuantity').value);
+            const amount = parseFloat(document.getElementById('salesAmount').value);
+            if (!date || !productName || !quantity || !amount) {
+                showToast('请填写必填项', 'error');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                const unitCost = parseFloat(document.getElementById('salesUnitCost').value) || 0;
+                const profit = parseFloat(document.getElementById('salesProfit').value) || 0;
+                const fields = {
+                    '销售日期': new Date(date).getTime(), '产品名称': productName,
+                    '销售数量': quantity, '销售总额': amount, '利润': profit
+                };
+                if (editingId) {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.salesTableId}/records/${editingId}`, 'PUT', { fields });
+                } else {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.salesTableId}/records`, 'POST', { fields });
+                }
+                closeModal('salesModal');
+                await loadData();
+                showToast('保存成功', 'success');
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ==================== 渲染 ====================
+        function renderAll() {
+            renderPurchase();
+            renderFormula();
+            renderSales();
+            renderStats();
+        }
+
+        function renderPurchase() {
+            const tbody = document.getElementById('purchaseTableBody');
+            tbody.innerHTML = purchaseData.map(r => `
+                <tr>
+                    <td>${r.fields['原料名称']}</td>
+                    <td>${r.fields['采购数量']}</td>
+                    <td>¥${Number(r.fields['采购单价'] || 0).toFixed(2)}</td>
+                    <td>¥${Number(r.fields['采购总价'] || 0).toFixed(2)}</td>
+                    <td>${formatDate(r.fields['采购日期'])}</td>
+                    <td><button class="btn btn-danger" onclick="deleteRecord('${r.id}', 'purchase')">删除</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderFormula() {
+            const tbody = document.getElementById('formulaTableBody');
+            tbody.innerHTML = formulaData.map(r => {
+                const materials = JSON.parse(r.fields['原料组成'] || '[]');
+                return `
+                    <tr>
+                        <td>${r.fields['产品名称']}</td>
+                        <td>${r.fields['制作数量']}</td>
+                        <td>${materials.map(m => `${m.name} ${m.amount}`).join(', ')}</td>
+                        <td>¥${Number(r.fields['单位成本'] || 0).toFixed(2)}</td>
+                        <td><button class="btn btn-danger" onclick="deleteRecord('${r.id}', 'formula')">删除</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderSales() {
+            const tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = salesData.map(r => {
+                const profit = Number(r.fields['利润'] || 0);
+                return `
+                    <tr>
+                        <td>${formatDate(r.fields['销售日期'])}</td>
+                        <td>${r.fields['产品名称']}</td>
+                        <td>${r.fields['销售数量']}</td>
+                        <td>¥${Number(r.fields['销售总额'] || 0).toFixed(2)}</td>
+                        <td>¥${(Number(r.fields['销售总额'] || 0) - profit).toFixed(2)}</td>
+                        <td class="${profit >= 0 ? 'profit' : 'profit-negative'}">¥${profit.toFixed(2)}</td>
+                        <td><button class="btn btn-danger" onclick="deleteRecord('${r.id}', 'sales')">删除</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderStats() {
+            const totalSales = salesData.reduce((sum, r) => sum + (Number(r.fields['销售总额']) || 0), 0);
+            const totalProfit = salesData.reduce((sum, r) => sum + (Number(r.fields['利润']) || 0), 0);
+            const totalCost = totalSales - totalProfit;
+            const profitRate = totalSales > 0 ? (totalProfit / totalSales * 100) : 0;
+
+            document.getElementById('totalSales').textContent = '¥' + totalSales.toFixed(2);
+            document.getElementById('totalCost').textContent = '¥' + totalCost.toFixed(2);
+            document.getElementById('totalProfit').textContent = '¥' + totalProfit.toFixed(2);
+            document.getElementById('profitRate').textContent = profitRate.toFixed(1) + '%';
+        }
+
+        async function deleteRecord(id, type) {
+            if (!confirm('确定删除？')) return;
+            try {
+                showLoading(true);
+                const tableId = type === 'purchase' ? config.purchaseTableId : type === 'formula' ? config.formulaTableId : config.salesTableId;
+                await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records/${id}`, 'DELETE');
+                await loadData();
+                showToast('删除成功', 'success');
+            } catch (err) {
+                showToast('删除失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function updateMaterialPrices() {
+            materialPrices = {};
+            purchaseData.forEach(r => {
+                const name = r.fields['原料名称'];
+                if (name) materialPrices[name] = { price: Number(r.fields['采购单价'] || 0) };
+            });
+        }
+
+        // ==================== UI辅助 ====================
+        function showTab(name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(name + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'stats') renderStats();
+        }
+
+        function toggleConfig() {
+            document.getElementById('configPanel').classList.toggle('show');
+        }
+
+        function showModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+        function showLoading(show) { document.getElementById('loading').classList.toggle('show', show); }
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' show';
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            return new Date(timestamp).toISOString().split('T')[0];
+        }
+
+        // 启动
+        init();
+    </script>
 </body>
 </html>

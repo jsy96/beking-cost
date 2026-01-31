@@ -1,15 +1,6 @@
 {
-  "name": "feishu-cost-system",
+  "name": "cost-system",
   "version": "1.0.0",
-  "description": "成本核算与利润统计系统 - 飞书版（支持云端部署）",
-  "scripts": {
-    "start": "node proxy-server.js"
-  },
-  "keywords": ["feishu", "cost", "accounting"],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^2.7.0"
-  }
+  "description": "成本核算系统",
+  "scripts": { "start": "node proxy-server.js" }
 }
