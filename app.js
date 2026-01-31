@@ -264,38 +264,38 @@ async function getFieldMappings() {
 // 字段定义
 function getPurchaseFields() {
     return [
-        { field_name: '原料名称', type: 1, description: '文本' },
-        { field_name: '规格', type: 1, description: '文本' },
-        { field_name: '采购数量', type: 2, description: '数字' },
-        { field_name: '单位', type: 1, description: '文本' },
-        { field_name: '采购总价', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '采购单价', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '采购日期', type: 5, description: '日期' },
-        { field_name: '供应商', type: 1, description: '文本' }
+        { field_name: '原料名称', type: 1 },
+        { field_name: '规格', type: 1 },
+        { field_name: '采购数量', type: 2 },
+        { field_name: '单位', type: 1 },
+        { field_name: '采购总价', type: 2 },
+        { field_name: '采购单价', type: 2 },
+        { field_name: '采购日期', type: 5 },
+        { field_name: '供应商', type: 1 }
     ];
 }
 
 function getFormulaFields() {
     return [
-        { field_name: '产品名称', type: 1, description: '文本' },
-        { field_name: '制作数量', type: 2, description: '数字' },
-        { field_name: '原料组成', type: 1, description: 'JSON文本' },
-        { field_name: '包装成本', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '水电成本', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '单位成本', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } }
+        { field_name: '产品名称', type: 1 },
+        { field_name: '制作数量', type: 2 },
+        { field_name: '原料组成', type: 1 },
+        { field_name: '包装成本', type: 2 },
+        { field_name: '水电成本', type: 2 },
+        { field_name: '单位成本', type: 2 }
     ];
 }
 
 function getSalesFields() {
     return [
-        { field_name: '销售日期', type: 5, description: '日期' },
-        { field_name: '产品名称', type: 1, description: '文本' },
-        { field_name: '销售数量', type: 2, description: '数字' },
-        { field_name: '销售总金额', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '销售单价', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '单位成本', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '成本总额', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } },
-        { field_name: '利润', type: 2, description: '数字', property: { formatter: { pattern: '0.00' } } }
+        { field_name: '销售日期', type: 5 },
+        { field_name: '产品名称', type: 1 },
+        { field_name: '销售数量', type: 2 },
+        { field_name: '销售总金额', type: 2 },
+        { field_name: '销售单价', type: 2 },
+        { field_name: '单位成本', type: 2 },
+        { field_name: '成本总额', type: 2 },
+        { field_name: '利润', type: 2 }
     ];
 }
 
