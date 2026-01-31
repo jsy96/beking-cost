@@ -1,6 +1,9 @@
 node_modules
 package-lock.json
 .DS_Store
+# 环境变量文件
 .env
+.env.local
+.env*.local
 .claude
 飞书API配置指南.md

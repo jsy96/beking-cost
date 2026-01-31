@@ -10,8 +10,7 @@
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { text-align: center; margin-bottom: 20px; color: #333; }
 
-        /* 顶部栏 */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        /* 按钮 */
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .btn-primary { background: #1890ff; color: white; }
         .btn-success { background: #52c41a; color: white; }
@@ -34,11 +33,7 @@
         .profit { color: #52c41a; }
         .profit-negative { color: #ff4d4f; }
 
-        /* 配置面板 */
-        .config-panel { position: fixed; top: 0; right: -400px; width: 400px; height: 100%; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); padding: 20px; transition: right 0.3s; z-index: 1000; overflow-y: auto; }
-        .config-panel.show { right: 0; }
-        .config-panel h2 { margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
+        /* 表单 */
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
         .form-actions { display: flex; gap: 10px; margin-top: 20px; }
@@ -80,12 +75,6 @@
 <body>
     <div class="container">
         <h1>烘焙成本计算</h1>
-
-        <!-- 顶部栏 -->
-        <div class="header">
-            <span id="status">未配置</span>
-            <button class="btn btn-primary" onclick="toggleConfig()">配置</button>
-        </div>
 
         <!-- 标签页 -->
         <div class="tabs">
@@ -188,31 +177,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- 配置面板 -->
-    <div id="configPanel" class="config-panel">
-        <h2>飞书配置</h2>
-        <div class="form-group">
-            <label>App ID</label>
-            <input type="text" id="appId" placeholder="cli_xxxxxxxxxxxxx">
-        </div>
-        <div class="form-group">
-            <label>App Secret</label>
-            <input type="password" id="appSecret" placeholder="xxxxxxxxxxxxxxxx">
-        </div>
-        <div class="form-group">
-            <label>Sheet Token (多维表格)</label>
-            <input type="text" id="sheetToken" placeholder="app_xxxxxxxxxxxxx">
-        </div>
-        <div class="form-actions">
-            <button class="btn btn-success" onclick="saveConfig()">保存配置</button>
-            <button class="btn" onclick="toggleConfig()">取消</button>
-        </div>
-        <p style="margin-top: 20px; color: #666; font-size: 12px;">
-            配置后系统将自动创建3个数据表。<br>
-            请确保飞书应用已开启 bitable:app 权限。
-        </p>
     </div>
 
     <!-- 原料采购弹窗 -->
@@ -331,68 +295,57 @@
     <script>
         // ==================== 配置 ====================
         const API_BASE = window.location.origin + '/api/feishu';
-        let config = { appId: '', appSecret: '', sheetToken: '', purchaseTableId: '', formulaTableId: '', salesTableId: '' };
-        let accessToken = '';
+        const CONFIG_API = window.location.origin + '/api/feishu-config';
+        const SHEET_TOKEN_PLACEHOLDER = '__SHEET_TOKEN__';
+        let config = { purchaseTableId: '', formulaTableId: '', salesTableId: '' };
         let purchaseData = [], formulaData = [], salesData = [], materialPrices = {};
         let editingId = null, editingType = '';
+        let isServerConfigured = false;
 
         // ==================== 初始化 ====================
-        function init() {
-            loadConfig();
-            if (config.appId && config.appSecret && config.sheetToken) {
+        async function init() {
+            await checkServerConfig();
+            if (isServerConfigured) {
                 initTables();
             } else {
-                toggleConfig();
+                showConfigError();
             }
         }
 
-        function loadConfig() {
-            const saved = localStorage.getItem('costConfig');
-            if (saved) {
-                config = { ...config, ...JSON.parse(saved) };
-                document.getElementById('appId').value = config.appId || '';
-                document.getElementById('appSecret').value = config.appSecret || '';
-                document.getElementById('sheetToken').value = config.sheetToken || '';
-                updateStatus();
+        async function checkServerConfig() {
+            try {
+                const res = await fetch(CONFIG_API);
+                const data = await res.json();
+                isServerConfigured = data.code === 0 && data.data.configured;
+            } catch (err) {
+                console.error('检查服务端配置失败:', err);
+                isServerConfigured = false;
             }
         }
 
-        function saveConfig() {
-            config.appId = document.getElementById('appId').value.trim();
-            config.appSecret = document.getElementById('appSecret').value.trim();
-            config.sheetToken = document.getElementById('sheetToken').value.trim();
-            if (!config.appId || !config.appSecret || !config.sheetToken) {
-                showToast('请填写完整配置', 'error');
-                return;
-            }
-            localStorage.setItem('costConfig', JSON.stringify(config));
-            toggleConfig();
-            initTables();
+        function showConfigError() {
+            document.querySelector('.container').innerHTML = `
+                <div style="text-align: center; padding: 100px 20px;">
+                    <h2 style="color: #ff4d4f;">服务端未配置</h2>
+                    <p style="color: #666; margin: 20px 0;">请在 Vercel 环境变量中配置：</p>
+                    <ul style="text-align: left; max-width: 400px; margin: 0 auto; color: #666;">
+                        <li>FEISHU_APP_ID</li>
+                        <li>FEISHU_APP_SECRET</li>
+                        <li>FEISHU_SHEET_TOKEN</li>
+                    </ul>
+                </div>
+            `;
         }
 
-        function updateStatus() {
-            document.getElementById('status').textContent = config.appId ? '已配置' : '未配置';
+        function showSheetTokenInput() {
+            // 如果需要在前端输入 sheetToken，可以实现此功能
+            // 当前版本 sheetToken 也在服务端配置
         }
 
         // ==================== 飞书API ====================
-        async function getAccessToken() {
-            if (accessToken) return accessToken;
-            const res = await fetch(API_BASE + '/open-apis/auth/v3/tenant_access_token/internal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ app_id: config.appId, app_secret: config.appSecret })
-            });
-            const data = await res.json();
-            if (data.code === 0) {
-                accessToken = data.tenant_access_token;
-                return accessToken;
-            }
-            throw new Error(data.msg || '获取token失败');
-        }
-
+        // 认证由服务端自动处理，无需前端获取 token
         async function feishuAPI(url, method = 'GET', body = null) {
-            const token = await getAccessToken();
-            const opts = { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } };
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
             if (body) opts.body = JSON.stringify(body);
             const res = await fetch(API_BASE + url.replace('https://open.feishu.cn', ''), opts);
             const data = await res.json();
@@ -404,28 +357,54 @@
         async function initTables() {
             try {
                 showLoading(true);
-                await getAccessToken();
 
                 // 获取现有表格
-                const tables = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`);
+                const tables = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables`);
                 const existing = tables.data.items;
 
-                // 查找或创建表格
+                // 查找或创建系统配置表
+                let configTbl = existing.find(t => t.name === '系统配置');
+                if (!configTbl) {
+                    configTbl = await createConfigTable();
+                } else {
+                    // 从配置表读取已有配置
+                    await loadConfigFromTable(configTbl.table_id);
+                }
+
+                // 查找或创建数据表格
                 let purchaseTbl = existing.find(t => t.name === '原料采购');
                 let formulaTbl = existing.find(t => t.name === '产品配方');
                 let salesTbl = existing.find(t => t.name === '商品销售');
 
-                if (!purchaseTbl) purchaseTbl = await createTable('原料采购');
-                if (!formulaTbl) formulaTbl = await createTable('产品配方');
-                if (!salesTbl) salesTbl = await createTable('商品销售');
+                let needSaveConfig = false;
+                if (!purchaseTbl) {
+                    purchaseTbl = await createTable('原料采购');
+                    config.purchaseTableId = purchaseTbl.table_id;
+                    needSaveConfig = true;
+                } else {
+                    config.purchaseTableId = purchaseTbl.table_id;
+                }
+                if (!formulaTbl) {
+                    formulaTbl = await createTable('产品配方');
+                    config.formulaTableId = formulaTbl.table_id;
+                    needSaveConfig = true;
+                } else {
+                    config.formulaTableId = formulaTbl.table_id;
+                }
+                if (!salesTbl) {
+                    salesTbl = await createTable('商品销售');
+                    config.salesTableId = salesTbl.table_id;
+                    needSaveConfig = true;
+                } else {
+                    config.salesTableId = salesTbl.table_id;
+                }
 
-                config.purchaseTableId = purchaseTbl.table_id;
-                config.formulaTableId = formulaTbl.table_id;
-                config.salesTableId = salesTbl.table_id;
-                localStorage.setItem('costConfig', JSON.stringify(config));
+                // 保存配置到飞书表格
+                if (needSaveConfig) {
+                    await saveConfigToTable(configTbl.table_id);
+                }
 
                 await loadData();
-                updateStatus();
                 showToast('初始化成功', 'success');
             } catch (err) {
                 showToast('初始化失败: ' + err.message, 'error');
@@ -434,8 +413,72 @@
             }
         }
 
+        // 创建系统配置表
+        async function createConfigTable() {
+            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables`, 'POST', {
+                table: { name: '系统配置' }
+            });
+            const tableId = res.data.table_id;
+
+            // 添加字段
+            const fields = [
+                { field_name: '配置名称', type: 1 },
+                { field_name: '配置值', type: 1 }
+            ];
+            for (const field of fields) {
+                try {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${tableId}/fields`, 'POST', field);
+                } catch (err) {
+                    console.warn('添加字段失败:', field.field_name);
+                }
+            }
+
+            return { table_id: tableId };
+        }
+
+        // 从飞书表格加载配置
+        async function loadConfigFromTable(configTableId) {
+            try {
+                const res = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${configTableId}/records`);
+                const records = res.data.items || [];
+                records.forEach(r => {
+                    const name = r.fields['配置名称'];
+                    const value = r.fields['配置值'];
+                    if (name === 'purchaseTableId') config.purchaseTableId = value;
+                    if (name === 'formulaTableId') config.formulaTableId = value;
+                    if (name === 'salesTableId') config.salesTableId = value;
+                });
+            } catch (err) {
+                console.warn('加载配置失败:', err.message);
+            }
+        }
+
+        // 保存配置到飞书表格
+        async function saveConfigToTable(configTableId) {
+            try {
+                // 先清空旧配置
+                const res = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${configTableId}/records`);
+                const records = res.data.items || [];
+                for (const record of records) {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${configTableId}/records/${record.record_id}`, 'DELETE');
+                }
+
+                // 写入新配置
+                const configs = [
+                    { fields: { '配置名称': 'purchaseTableId', '配置值': config.purchaseTableId } },
+                    { fields: { '配置名称': 'formulaTableId', '配置值': config.formulaTableId } },
+                    { fields: { '配置名称': 'salesTableId', '配置值': config.salesTableId } }
+                ];
+                for (const cfg of configs) {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${configTableId}/records`, 'POST', cfg);
+                }
+            } catch (err) {
+                console.warn('保存配置失败:', err.message);
+            }
+        }
+
         async function createTable(name) {
-            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`, 'POST', {
+            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables`, 'POST', {
                 table: { name }
             });
             // 飞书API返回: { code: 0, data: { table_id: '...' } }
@@ -471,7 +514,7 @@
             // 逐个添加字段
             for (const field of fields) {
                 try {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/fields`, 'POST', field);
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${tableId}/fields`, 'POST', field);
                     console.log('添加字段成功:', field.field_name);
                 } catch (err) {
                     console.warn('添加字段失败:', field.field_name, err.message);
@@ -500,7 +543,7 @@
         }
 
         async function getRecords(tableId) {
-            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records`);
+            const res = await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${tableId}/records`);
             return (res.data.items || []).map(r => ({ id: r.record_id, fields: r.fields }));
         }
 
@@ -541,9 +584,9 @@
                     '采购总价': total, '采购日期': new Date(date).getTime()
                 };
                 if (editingId) {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.purchaseTableId}/records/${editingId}`, 'PUT', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.purchaseTableId}/records/${editingId}`, 'PUT', { fields });
                 } else {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.purchaseTableId}/records`, 'POST', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.purchaseTableId}/records`, 'POST', { fields });
                 }
                 closeModal('purchaseModal');
                 await loadData();
@@ -641,9 +684,9 @@
                     '原料组成': JSON.stringify(materials), '单位成本': unitCost
                 };
                 if (editingId) {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.formulaTableId}/records/${editingId}`, 'PUT', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.formulaTableId}/records/${editingId}`, 'PUT', { fields });
                 } else {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.formulaTableId}/records`, 'POST', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.formulaTableId}/records`, 'POST', { fields });
                 }
                 closeModal('formulaModal');
                 await loadData();
@@ -709,9 +752,9 @@
                     '销售数量': quantity, '销售总额': amount, '利润': profit
                 };
                 if (editingId) {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.salesTableId}/records/${editingId}`, 'PUT', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.salesTableId}/records/${editingId}`, 'PUT', { fields });
                 } else {
-                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.salesTableId}/records`, 'POST', { fields });
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${config.salesTableId}/records`, 'POST', { fields });
                 }
                 closeModal('salesModal');
                 await loadData();
@@ -796,7 +839,7 @@
             try {
                 showLoading(true);
                 const tableId = type === 'purchase' ? config.purchaseTableId : type === 'formula' ? config.formulaTableId : config.salesTableId;
-                await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records/${id}`, 'DELETE');
+                await feishuAPI(`/open-apis/bitable/v1/apps/${SHEET_TOKEN_PLACEHOLDER}/tables/${tableId}/records/${id}`, 'DELETE');
                 await loadData();
                 showToast('删除成功', 'success');
             } catch (err) {
@@ -821,10 +864,6 @@
             document.getElementById(name + 'Tab').classList.add('active');
             event.target.classList.add('active');
             if (name === 'stats') renderStats();
-        }
-
-        function toggleConfig() {
-            document.getElementById('configPanel').classList.toggle('show');
         }
 
         function showModal(id) { document.getElementById(id).classList.add('show'); }

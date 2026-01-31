@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/api/:path*", "destination": "/api/index" }]
+  "rewrites": [
+    { "source": "/api/feishu/:path*", "destination": "/api/index" },
+    { "source": "/api/feishu-config", "destination": "/api/feishu-config" }
+  ]
 }
