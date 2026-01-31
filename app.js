@@ -689,7 +689,7 @@ function updateMaterialPrice(selectElement) {
     const priceInput = row.querySelector('.material-price');
 
     if (materialName && materialPrices[materialName]) {
-        priceInput.value = materialPrices[materialName].price.toFixed(2);
+        priceInput.value = Number(materialPrices[materialName].price).toFixed(2);
         // 更新单位
         const unitInput = row.querySelector('.material-unit');
         if (!unitInput.value) {
