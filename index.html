@@ -438,9 +438,47 @@
             const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`, 'POST', {
                 table: { name }
             });
-            console.log('创建表格响应:', res);
-            // 飞书API返回的数据结构可能是 res.data.table 或直接 res.table
-            return res.data?.table || res.table;
+            // 飞书API返回: { code: 0, data: { table_id: '...' } }
+            const tableId = res.data.table_id;
+
+            // 根据表名添加对应的字段
+            let fields = [];
+            if (name === '原料采购') {
+                fields = [
+                    { field_name: '原料名称', type: 1 },
+                    { field_name: '采购数量', type: 2 },
+                    { field_name: '采购单价', type: 2 },
+                    { field_name: '采购总价', type: 2 },
+                    { field_name: '采购日期', type: 5 }
+                ];
+            } else if (name === '产品配方') {
+                fields = [
+                    { field_name: '产品名称', type: 1 },
+                    { field_name: '制作数量', type: 2 },
+                    { field_name: '原料组成', type: 1 },
+                    { field_name: '单位成本', type: 2 }
+                ];
+            } else if (name === '商品销售') {
+                fields = [
+                    { field_name: '销售日期', type: 5 },
+                    { field_name: '产品名称', type: 1 },
+                    { field_name: '销售数量', type: 2 },
+                    { field_name: '销售总额', type: 2 },
+                    { field_name: '利润', type: 2 }
+                ];
+            }
+
+            // 逐个添加字段
+            for (const field of fields) {
+                try {
+                    await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/fields`, 'POST', field);
+                    console.log('添加字段成功:', field.field_name);
+                } catch (err) {
+                    console.warn('添加字段失败:', field.field_name, err.message);
+                }
+            }
+
+            return { table_id: tableId };
         }
 
         async function loadData() {
