@@ -438,7 +438,9 @@
             const res = await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables`, 'POST', {
                 table: { name }
             });
-            return res.data.table;
+            console.log('创建表格响应:', res);
+            // 飞书API返回的数据结构可能是 res.data.table 或直接 res.table
+            return res.data?.table || res.table;
         }
 
         async function loadData() {
