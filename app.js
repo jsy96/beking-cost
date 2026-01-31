@@ -333,6 +333,9 @@ async function getTableRecords(tableId) {
             reverseMapping = {};
         }
 
+        console.log('getTableRecords - tableId:', tableId);
+        console.log('getTableRecords - reverseMapping:', reverseMapping);
+
         return result.data.items.map(record => {
             // 将字段ID转换为字段名称
             const convertedFields = {};
@@ -341,10 +344,13 @@ async function getTableRecords(tableId) {
                 convertedFields[fieldName] = value;
             }
 
-            return {
+            const converted = {
                 id: record.record_id,
                 fields: convertedFields
             };
+
+            console.log('Converted record:', converted);
+            return converted;
         });
     }
     return [];
