@@ -395,16 +395,23 @@ function convertFieldNamesToIds(tableId, fields) {
         return fields;
     }
 
+    console.log('convertFieldNamesToIds - tableId:', tableId);
+    console.log('convertFieldNamesToIds - mapping:', mapping);
+    console.log('convertFieldNamesToIds - fields:', fields);
+
     const converted = {};
     for (const [name, value] of Object.entries(fields)) {
         const fieldId = mapping[name];
+        console.log(`Converting field "${name}" -> fieldId: "${fieldId}"`);
         if (fieldId) {
             converted[fieldId] = value;
         } else {
             // 如果找不到字段ID，使用原字段名（兼容新创建的表格）
+            console.warn(`Warning: Field "${name}" not found in mapping, using original name`);
             converted[name] = value;
         }
     }
+    console.log('convertFieldNamesToIds - converted:', converted);
     return converted;
 }
 
