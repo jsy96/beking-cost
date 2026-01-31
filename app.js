@@ -545,8 +545,8 @@ function renderPurchaseTable() {
             <td>${record.fields['规格'] || '-'}</td>
             <td>${record.fields['采购数量'] || 0}</td>
             <td>${record.fields['单位'] || '-'}</td>
-            <td>${(record.fields['采购单价'] || 0).toFixed(2)}</td>
-            <td>${(record.fields['采购总价'] || 0).toFixed(2)}</td>
+            <td>${Number(record.fields['采购单价'] || 0).toFixed(2)}</td>
+            <td>${Number(record.fields['采购总价'] || 0).toFixed(2)}</td>
             <td>${timestampToDateString(record.fields['采购日期']) || '-'}</td>
             <td>${record.fields['供应商'] || '-'}</td>
             <td>
@@ -798,7 +798,7 @@ function renderFormulaTable() {
             }
         }
 
-        const otherCost = ((record.fields['包装成本'] || 0) + (record.fields['水电成本'] || 0)).toFixed(2);
+        const otherCost = (Number(record.fields['包装成本'] || 0) + Number(record.fields['水电成本'] || 0)).toFixed(2);
 
         return `
             <tr>
@@ -806,7 +806,7 @@ function renderFormulaTable() {
                 <td>${record.fields['制作数量'] || 0}</td>
                 <td>${materialText || '-'}</td>
                 <td>${otherCost}</td>
-                <td>${(record.fields['单位成本'] || 0).toFixed(2)}</td>
+                <td>${Number(record.fields['单位成本'] || 0).toFixed(2)}</td>
                 <td>
                     <button class="btn btn-sm btn-secondary" onclick='showFormulaForm(${JSON.stringify(record).replace(/'/g, "&#39;")})'>编辑</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteFormula('${record.id}')">删除</button>
@@ -826,10 +826,10 @@ function showSalesForm(record = null) {
         document.getElementById('salesProductName').value = record.fields['产品名称'] || '';
         document.getElementById('salesQuantity').value = record.fields['销售数量'] || '';
         document.getElementById('salesTotalAmount').value = record.fields['销售总金额'] || '';
-        document.getElementById('salesUnitPrice').value = (record.fields['销售单价'] || 0).toFixed(2);
-        document.getElementById('salesUnitCost').value = (record.fields['单位成本'] || 0).toFixed(2);
-        document.getElementById('salesTotalCost').value = (record.fields['成本总额'] || 0).toFixed(2);
-        document.getElementById('salesProfit').value = (record.fields['利润'] || 0).toFixed(2);
+        document.getElementById('salesUnitPrice').value = Number(record.fields['销售单价'] || 0).toFixed(2);
+        document.getElementById('salesUnitCost').value = Number(record.fields['单位成本'] || 0).toFixed(2);
+        document.getElementById('salesTotalCost').value = Number(record.fields['成本总额'] || 0).toFixed(2);
+        document.getElementById('salesProfit').value = Number(record.fields['利润'] || 0).toFixed(2);
     } else {
         document.getElementById('salesRecordId').value = '';
         document.getElementById('salesDate').value = new Date().toISOString().split('T')[0];
@@ -970,7 +970,7 @@ function renderSalesTable() {
     });
 
     tbody.innerHTML = sortedSales.map(record => {
-        const profit = record.fields['利润'] || 0;
+        const profit = Number(record.fields['利润'] || 0);
         const profitClass = profit >= 0 ? 'profit' : 'profit-negative';
 
         return `
@@ -978,9 +978,9 @@ function renderSalesTable() {
                 <td>${timestampToDateString(record.fields['销售日期']) || '-'}</td>
                 <td>${record.fields['产品名称'] || ''}</td>
                 <td>${record.fields['销售数量'] || 0}</td>
-                <td>${(record.fields['销售单价'] || 0).toFixed(2)}</td>
-                <td>${(record.fields['销售总金额'] || 0).toFixed(2)}</td>
-                <td>${(record.fields['成本总额'] || 0).toFixed(2)}</td>
+                <td>${Number(record.fields['销售单价'] || 0).toFixed(2)}</td>
+                <td>${Number(record.fields['销售总金额'] || 0).toFixed(2)}</td>
+                <td>${Number(record.fields['成本总额'] || 0).toFixed(2)}</td>
                 <td class="${profitClass}">${profit.toFixed(2)}</td>
                 <td>
                     <button class="btn btn-sm btn-secondary" onclick='showSalesForm(${JSON.stringify(record).replace(/'/g, "&#39;")})'>编辑</button>
