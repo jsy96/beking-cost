@@ -19,6 +19,13 @@ let fieldMapping = {
     sales: {}
 };
 
+// 反向映射（飞书字段ID -> 字段名）
+let reverseFieldMapping = {
+    purchase: {},
+    formula: {},
+    sales: {}
+};
+
 // 本地数据缓存
 let purchaseData = [];
 let formulaData = [];
@@ -227,8 +234,10 @@ async function getFieldMappings() {
 
         if (result.data && result.data.items) {
             fieldMapping[tbl.name] = {};
+            reverseFieldMapping[tbl.name] = {};
             result.data.items.forEach(field => {
                 fieldMapping[tbl.name][field.field_name] = field.id;
+                reverseFieldMapping[tbl.name][field.id] = field.field_name;
             });
         }
     }
@@ -312,10 +321,31 @@ async function getTableRecords(tableId) {
     );
 
     if (result.data && result.data.items) {
-        return result.data.items.map(record => ({
-            id: record.record_id,
-            fields: record.fields
-        }));
+        // 确定使用哪个反向映射
+        let reverseMapping;
+        if (tableId === config.purchaseTableId) {
+            reverseMapping = reverseFieldMapping.purchase;
+        } else if (tableId === config.formulaTableId) {
+            reverseMapping = reverseFieldMapping.formula;
+        } else if (tableId === config.salesTableId) {
+            reverseMapping = reverseFieldMapping.sales;
+        } else {
+            reverseMapping = {};
+        }
+
+        return result.data.items.map(record => {
+            // 将字段ID转换为字段名称
+            const convertedFields = {};
+            for (const [fieldId, value] of Object.entries(record.fields)) {
+                const fieldName = reverseMapping[fieldId] || fieldId;
+                convertedFields[fieldName] = value;
+            }
+
+            return {
+                id: record.record_id,
+                fields: convertedFields
+            };
+        });
     }
     return [];
 }
