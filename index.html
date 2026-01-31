@@ -675,7 +675,8 @@
         function updateSalesCost() {
             const productName = document.getElementById('salesProduct').value;
             const formula = formulaData.find(f => f.fields['产品名称'] === productName);
-            document.getElementById('salesUnitCost').value = formula ? formula.fields['单位成本'].toFixed(2) : '';
+            const unitCost = Number(formula?.fields['单位成本'] || 0);
+            document.getElementById('salesUnitCost').value = unitCost > 0 ? unitCost.toFixed(2) : '';
             calcSalesProfit();
         }
 
