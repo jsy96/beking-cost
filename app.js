@@ -211,12 +211,30 @@ async function initTables() {
 
 // 创建数据表
 async function createTable(name, fields) {
+    // 先创建表格（不包含字段）
     const result = await feishuAPI(
         `https://open.feishu.cn/open-apis/bitable/v1/apps/${config.sheetToken}/tables`,
         'POST',
-        { table: { name, default_view_name: '网格视图', fields } }
+        { table: { name, default_view_name: '网格视图' } }
     );
-    return result.data.table;
+
+    const table = result.data.table;
+    const tableId = table.table_id;
+
+    // 逐个添加字段
+    for (const field of fields) {
+        try {
+            await feishuAPI(
+                `https://open.feishu.cn/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/fields`,
+                'POST',
+                field
+            );
+        } catch (error) {
+            console.warn('创建字段失败:', field.field_name, error.message);
+        }
+    }
+
+    return table;
 }
 
 // 获取字段映射
