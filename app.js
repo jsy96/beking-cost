@@ -322,22 +322,54 @@ async function getTableRecords(tableId) {
 
 // 添加记录
 async function addRecord(tableId, fields) {
+    // 将字段名称转换为字段ID
+    const convertedFields = convertFieldNamesToIds(tableId, fields);
+
     const result = await feishuAPI(
         `https://open.feishu.cn/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records`,
         'POST',
-        { fields }
+        { fields: convertedFields }
     );
     return result.data.record;
 }
 
 // 更新记录
 async function updateRecord(tableId, recordId, fields) {
+    // 将字段名称转换为字段ID
+    const convertedFields = convertFieldNamesToIds(tableId, fields);
+
     const result = await feishuAPI(
         `https://open.feishu.cn/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${tableId}/records/${recordId}`,
         'PUT',
-        { fields }
+        { fields: convertedFields }
     );
     return result.data.record;
+}
+
+// 将字段名称转换为字段ID
+function convertFieldNamesToIds(tableId, fields) {
+    let mapping;
+    if (tableId === config.purchaseTableId) {
+        mapping = fieldMapping.purchase;
+    } else if (tableId === config.formulaTableId) {
+        mapping = fieldMapping.formula;
+    } else if (tableId === config.salesTableId) {
+        mapping = fieldMapping.sales;
+    } else {
+        return fields;
+    }
+
+    const converted = {};
+    for (const [name, value] of Object.entries(fields)) {
+        const fieldId = mapping[name];
+        if (fieldId) {
+            converted[fieldId] = value;
+        } else {
+            // 如果找不到字段ID，使用原字段名（兼容新创建的表格）
+            converted[name] = value;
+        }
+    }
+    return converted;
 }
 
 // 删除记录
