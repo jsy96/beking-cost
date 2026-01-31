@@ -231,12 +231,12 @@
                 <input type="number" id="purchaseQuantity" step="0.01" oninput="calcPurchasePrice()">
             </div>
             <div class="form-group">
-                <label>采购单价 *</label>
-                <input type="number" id="purchasePrice" step="0.01" oninput="calcPurchasePrice()">
+                <label>采购总价 *</label>
+                <input type="number" id="purchaseTotal" step="0.01" oninput="calcPurchasePrice()">
             </div>
             <div class="form-group">
-                <label>采购总价</label>
-                <input type="number" id="purchaseTotal" step="0.01" readonly>
+                <label>采购单价</label>
+                <input type="number" id="purchasePrice" step="0.01" readonly>
             </div>
             <div class="form-group">
                 <label>采购日期 *</label>
@@ -518,16 +518,18 @@
 
         function calcPurchasePrice() {
             const qty = parseFloat(document.getElementById('purchaseQuantity').value) || 0;
-            const price = parseFloat(document.getElementById('purchasePrice').value) || 0;
-            document.getElementById('purchaseTotal').value = (qty * price).toFixed(2);
+            const total = parseFloat(document.getElementById('purchaseTotal').value) || 0;
+            const unitPrice = qty > 0 ? (total / qty).toFixed(2) : '';
+            document.getElementById('purchasePrice').value = unitPrice;
         }
 
         async function savePurchase() {
             const name = document.getElementById('purchaseName').value.trim();
             const quantity = parseFloat(document.getElementById('purchaseQuantity').value);
+            const total = parseFloat(document.getElementById('purchaseTotal').value);
             const price = parseFloat(document.getElementById('purchasePrice').value);
             const date = document.getElementById('purchaseDate').value;
-            if (!name || !quantity || !price || !date) {
+            if (!name || !quantity || !total || !date) {
                 showToast('请填写必填项', 'error');
                 return;
             }
@@ -536,7 +538,7 @@
                 showLoading(true);
                 const fields = {
                     '原料名称': name, '采购数量': quantity, '采购单价': price,
-                    '采购总价': quantity * price, '采购日期': new Date(date).getTime()
+                    '采购总价': total, '采购日期': new Date(date).getTime()
                 };
                 if (editingId) {
                     await feishuAPI(`/open-apis/bitable/v1/apps/${config.sheetToken}/tables/${config.purchaseTableId}/records/${editingId}`, 'PUT', { fields });
